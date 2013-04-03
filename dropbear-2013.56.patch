@@ -1,0 +1,46 @@
+diff -Naur dropbear-2013.56/cli-runopts.c dropbear-2013.56-modified/cli-runopts.c
+--- dropbear-2013.56/cli-runopts.c	2013-03-21 23:29:34.000000000 +0800
++++ dropbear-2013.56-modified/cli-runopts.c	2013-04-04 00:50:10.027888130 +0800
+@@ -48,7 +48,7 @@
+ #endif
+ 
+ static void printhelp() {
+-
++	fprintf(stderr, "Use ssh_program:%s\n", _PATH_SSH_PROGRAM);
+ 	fprintf(stderr, "Dropbear SSH client v%s https://matt.ucc.asn.au/dropbear/dropbear.html\n"
+ #ifdef ENABLE_CLI_MULTIHOP
+ 					"Usage: %s [options] [user@]host[/port][,[user@]host/port],...] [command]\n"
+diff -Naur dropbear-2013.56/options.h dropbear-2013.56-modified/options.h
+--- dropbear-2013.56/options.h	2013-03-21 23:29:35.000000000 +0800
++++ dropbear-2013.56-modified/options.h	2013-04-04 00:37:17.061605454 +0800
+@@ -252,7 +252,9 @@
+ 
+ /* This is used by the scp binary when used as a client binary. If you're
+  * not using the Dropbear client, you'll need to change it */
++#ifndef _PATH_SSH_PROGRAM
+ #define _PATH_SSH_PROGRAM "/usr/bin/dbclient"
++#endif
+ 
+ /* Whether to log commands executed by a client. This only logs the 
+  * (single) command sent to the server, not what a user did in a 
+@@ -289,7 +291,9 @@
+ #define DEFAULT_IDLE_TIMEOUT 0
+ 
+ /* The default path. This will often get replaced by the shell */
++#ifndef DEFAULT_PATH
+ #define DEFAULT_PATH "/usr/bin:/bin"
++#endif
+ 
+ /* Some other defines (that mostly should be left alone) are defined
+  * in sysoptions.h */
+diff -Naur dropbear-2013.56/scp.c dropbear-2013.56-modified/scp.c
+--- dropbear-2013.56/scp.c	2013-03-21 23:29:35.000000000 +0800
++++ dropbear-2013.56-modified/scp.c	2013-04-04 00:47:57.889549210 +0800
+@@ -1144,6 +1144,7 @@
+ void
+ usage(void)
+ {
++	(void) fprintf(stderr, "Use ssh_program:%s\n", ssh_program);
+ 	(void) fprintf(stderr,
+ 	    "usage: scp [-1246BCpqrv] [-c cipher] [-F ssh_config] [-i identity_file]\n"
+ 	    "           [-l limit] [-o ssh_option] [-P port] [-S program]\n"
