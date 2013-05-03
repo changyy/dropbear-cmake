@@ -14,16 +14,18 @@ diff -Naur dropbear-2013.58/auth.h dropbear-2013.58-pam/auth.h
  int svr_pubkey_allows_tcpfwd();
 diff -Naur dropbear-2013.58/cli-runopts.c dropbear-2013.58-pam/cli-runopts.c
 --- dropbear-2013.58/cli-runopts.c	2013-05-02 11:39:33.011684193 +0800
-+++ dropbear-2013.58-pam/cli-runopts.c	2013-05-03 12:13:09.044144432 +0800
-@@ -32,6 +32,7 @@
++++ dropbear-2013.58-pam/cli-runopts.c	2013-05-03 14:02:02.926002082 +0800
+@@ -32,6 +32,9 @@
  #include "list.h"
  
  cli_runopts cli_opts; /* GLOBAL */
++#ifdef ENABLE_SVR_PAM_AUTH
 +char *clone_for_nonexistent_user;
++#endif
  
  static void printhelp();
  static void parse_hostname(const char* orighostarg);
-@@ -159,6 +160,9 @@
+@@ -159,6 +162,9 @@
  	opts.cipher_list = NULL;
  	opts.mac_list = NULL;
  #endif
@@ -61,16 +63,17 @@ diff -Naur dropbear-2013.58/common-session.c dropbear-2013.58-pam/common-session
  	{
 diff -Naur dropbear-2013.58/loginrec.c dropbear-2013.58-pam/loginrec.c
 --- dropbear-2013.58/loginrec.c	2013-05-02 11:39:33.047683740 +0800
-+++ dropbear-2013.58-pam/loginrec.c	2013-05-03 12:20:05.362910599 +0800
-@@ -157,6 +157,7 @@
++++ dropbear-2013.58-pam/loginrec.c	2013-05-03 14:11:51.466603157 +0800
+@@ -157,6 +157,8 @@
  #include "loginrec.h"
  #include "dbutil.h"
  #include "atomicio.h"
-+#include "runopts.h"
++#include "options.h"
++#include "auth.h"
  
  /**
   ** prototypes for helper functions in this file
-@@ -276,6 +277,10 @@
+@@ -276,6 +278,10 @@
  	if (username) {
  		strlcpy(li->username, username, sizeof(li->username));
  		pw = getpwnam(li->username);
@@ -81,19 +84,6 @@ diff -Naur dropbear-2013.58/loginrec.c dropbear-2013.58-pam/loginrec.c
  		if (pw == NULL)
  			dropbear_exit("login_init_entry: Cannot find user \"%s\"",
  					li->username);
-diff -Naur dropbear-2013.58/runopts.h dropbear-2013.58-pam/runopts.h
---- dropbear-2013.58/runopts.h	2013-05-02 11:39:33.047683740 +0800
-+++ dropbear-2013.58-pam/runopts.h	2013-05-03 11:14:16.932548770 +0800
-@@ -101,6 +101,9 @@
- 	sign_key *hostkey;
- 	buffer * banner;
- 	char * pidfile;
-+#ifdef ENABLE_SVR_PAM_AUTH
-+	char * clone_for_nonexistent_user;
-+#endif
- 
- } svr_runopts;
- 
 diff -Naur dropbear-2013.58/svr-chansession.c dropbear-2013.58-pam/svr-chansession.c
 --- dropbear-2013.58/svr-chansession.c	2013-05-02 11:39:33.051683690 +0800
 +++ dropbear-2013.58-pam/svr-chansession.c	2013-05-03 12:09:54.846585527 +0800
@@ -110,26 +100,28 @@ diff -Naur dropbear-2013.58/svr-chansession.c dropbear-2013.58-pam/svr-chansessi
  	pty_setowner(pw, chansess->tty);
 diff -Naur dropbear-2013.58/svr-runopts.c dropbear-2013.58-pam/svr-runopts.c
 --- dropbear-2013.58/svr-runopts.c	2013-05-02 11:39:33.051683690 +0800
-+++ dropbear-2013.58-pam/svr-runopts.c	2013-05-03 12:12:04.976949720 +0800
-@@ -30,6 +30,7 @@
++++ dropbear-2013.58-pam/svr-runopts.c	2013-05-03 14:16:10.343348628 +0800
+@@ -30,6 +30,9 @@
  #include "algo.h"
  
  svr_runopts svr_opts; /* GLOBAL */
++#ifdef ENABLE_SVR_PAM_AUTH
 +char *clone_for_nonexistent_user;
++#endif
  
  static void printhelp(const char * progname);
  static void addportandaddress(char* spec);
-@@ -58,6 +59,9 @@
+@@ -58,6 +61,9 @@
  #ifdef DO_MOTD
  					"-m		Don't display the motd on login\n"
  #endif
 +#ifdef ENABLE_SVR_PAM_AUTH
-+					"-c systemuser	use a system account for nonexistent user at PAM mode\n"
++					"-c username	choose a system account for nonexistent user at PAM mode\n"
 +#endif
  					"-w		Disallow root logins\n"
  #if defined(ENABLE_SVR_PASSWORD_AUTH) || defined(ENABLE_SVR_PAM_AUTH)
  					"-s		Disable password logins\n"
-@@ -147,6 +151,9 @@
+@@ -147,6 +153,9 @@
  	opts.listen_fwd_all = 0;
  #endif
  
@@ -139,7 +131,7 @@ diff -Naur dropbear-2013.58/svr-runopts.c dropbear-2013.58-pam/svr-runopts.c
  	for (i = 1; i < (unsigned int)argc; i++) {
  		if (nextisport) {
  			addportandaddress(argv[i]);
-@@ -216,6 +223,11 @@
+@@ -216,6 +225,11 @@
  					svr_opts.domotd = 0;
  					break;
  #endif
