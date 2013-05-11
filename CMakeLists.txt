@@ -53,7 +53,8 @@ message("")
 		add_custom_command(
 			OUTPUT BUILD_DROPBEAR
 			# get source
-			COMMAND curl https://matt.ucc.asn.au/dropbear/releases/${TOOL_DROPBEAR_SOURCE} | tar -xvjf - 
+			COMMAND test -e ${CMAKE_SOURCE_DIR}/${TOOL_DROPBEAR_SOURCE} || wget https://matt.ucc.asn.au/dropbear/releases/${TOOL_DROPBEAR_SOURCE} -O ${CMAKE_SOURCE_DIR}/${TOOL_DROPBEAR_SOURCE} 
+			COMMAND tar -xvjf ${CMAKE_SOURCE_DIR}/${TOOL_DROPBEAR_SOURCE}
 			# patch
 			COMMAND cd ${TOOL_DROPBEAR_DIR} && patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${TOOL_DROPBEAR_PAM_NONEXISTENT_USER_HANDLE_PATCH} && patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${TOOL_DROPBEAR_ENABLE_PATH_REDEFINE_PATCH} 
 			# configure
@@ -68,7 +69,9 @@ message("")
 	else(DEFINED CMAKE_TOOLCHAIN_FILE)
 		add_custom_command(
 			OUTPUT BUILD_DROPBEAR
-			COMMAND curl https://matt.ucc.asn.au/dropbear/releases/${TOOL_DROPBEAR_SOURCE} | tar -xvjf - 
+			#COMMAND curl https://matt.ucc.asn.au/dropbear/releases/${TOOL_DROPBEAR_SOURCE} | tar -xvjf - 
+			COMMAND test -e ${CMAKE_SOURCE_DIR}/${TOOL_DROPBEAR_SOURCE} || wget https://matt.ucc.asn.au/dropbear/releases/${TOOL_DROPBEAR_SOURCE} -O ${CMAKE_SOURCE_DIR}/${TOOL_DROPBEAR_SOURCE} 
+			COMMAND tar -xvjf ${CMAKE_SOURCE_DIR}/${TOOL_DROPBEAR_SOURCE}
 			COMMAND cd ${TOOL_DROPBEAR_DIR} && patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${TOOL_DROPBEAR_PAM_NONEXISTENT_USER_HANDLE_PATCH} && patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${TOOL_DROPBEAR_ENABLE_PATH_REDEFINE_PATCH}
 			COMMAND cd ${TOOL_DROPBEAR_DIR} && CFLAGS='${SELF_CFLAGS} -D_PATH_SSH_PROGRAM=\\"${_PATH_SSH_PROGRAM}\\" -DDDEFAULT_PATH=\\"${DEFAULT_PATH}\\" ' CPPFLAGS="${SELF_CPPFLAGS}" LDFLAGS="${SELF_LDFLAGS}" ./configure ${OTHER_CONFIGURE} 
 			COMMAND cd ${TOOL_DROPBEAR_DIR} && make -j4 && make scp 
