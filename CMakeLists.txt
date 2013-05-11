@@ -20,6 +20,10 @@ set(TOOL_DROPBEAR_SOURCE dropbear-2013.58.tar.bz2)
 set(TOOL_DROPBEAR_DIR dropbear-2013.58)
 
 set(OTHER_CONFIGURE "")
+set(SELF_CPPFLAGS "")
+set(SELF_CFLAGS "")
+set(SELF_LDFLAGS "")
+set(SELF_DEPENDS "")
 
 message("")
 if (NOT DEFINED _PATH_SSH_PROGRAM)
@@ -31,26 +35,46 @@ if (NOT DEFINED DEFAULT_PATH)
 endif (NOT DEFINED DEFAULT_PATH)
 message("[DEFAULT_PATH] (use -DDEFAULT_PATH=/path/bin:/path2/bin to redefine ) : ${DEFAULT_PATH}")
 if (NOT DEFINED PAM_ENABLE)
-message("[PAM_ENABLE] (use -DPAM_ENABLE:bool=ON to enable PAM usage)")
+	message("[PAM_ENABLE] (use -DPAM_ENABLE:bool=ON to enable PAM usage)")
 else(NOT DEFINED PAM_ENABLE)
 message("[PAM_ENABLE] (remove -DPAM_ENABLE:bool=ON to disable PAM usage) : ${PAM_ENABLE}")
-set(OTHER_CONFIGURE "${OTHER_CONFIGURE};--enable-pam")
+	set(OTHER_CONFIGURE "${OTHER_CONFIGURE};--enable-pam")
+	if(NOT TARGET build_libpam)
+		add_subdirectory(libpam-cmake)
+	endif(NOT TARGET build_libpam)
+	set(SELF_CFLAGS "${SELF_CFLAGS};-I${CMAKE_BINARY_DIR}/include")
+	set(SELF_CPPFLAGS "${SELF_CPPFLAGS};-I${CMAKE_BINARY_DIR}/include")
+	set(SELF_LDFLAGS "${SELF_LDFLAGS};-L${CMAKE_BINARY_DIR}/lib")
+	set(SELF_DEPENDS "${SELF_DEPENDS};build_libpam")
 endif (NOT DEFINED PAM_ENABLE)
 message("")
 
 	if(DEFINED CMAKE_TOOLCHAIN_FILE)
 		add_custom_command(
 			OUTPUT BUILD_DROPBEAR
-			COMMAND curl https://matt.ucc.asn.au/dropbear/releases/${TOOL_DROPBEAR_SOURCE} | tar -xvjf - && cd ${CMAKE_BINARY_DIR}/${TOOL_DROPBEAR_DIR} && patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${TOOL_DROPBEAR_PAM_NONEXISTENT_USER_HANDLE_PATCH} && patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${TOOL_DROPBEAR_ENABLE_PATH_REDEFINE_PATCH} && ${target_platform_preconfigure_options} ./configure --host=${target_platform} --disable-zlib ${OTHER_CONFIGURE} && CFLAGS=' -D_PATH_SSH_PROGRAM=\\"${_PATH_SSH_PROGRAM}\\" -DDEFAULT_PATH=\\"${DEFAULT_PATH}\\" ' make -j2 && CFLAGS=' -D_PATH_SSH_PROGRAM=\\"${_PATH_SSH_PROGRAM}\\" -DDEFAULT_PATH=\\"${DEFAULT_PATH}\\" ' make scp && mkdir -p ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} && cp ${CMAKE_BINARY_DIR}/${TOOL_DROPBEAR_DIR}/dbclient ${CMAKE_BINARY_DIR}/${TOOL_DROPBEAR_DIR}/dropbear ${CMAKE_BINARY_DIR}/${TOOL_DROPBEAR_DIR}/scp ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-			WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+			# get source
+			COMMAND curl https://matt.ucc.asn.au/dropbear/releases/${TOOL_DROPBEAR_SOURCE} | tar -xvjf - 
+			# patch
+			COMMAND cd ${TOOL_DROPBEAR_DIR} && patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${TOOL_DROPBEAR_PAM_NONEXISTENT_USER_HANDLE_PATCH} && patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${TOOL_DROPBEAR_ENABLE_PATH_REDEFINE_PATCH} 
+			# configure
+			COMMAND cd ${TOOL_DROPBEAR_DIR} && CFLAGS='${SELF_CFLAGS} -D_PATH_SSH_PROGRAM=\\"${_PATH_SSH_PROGRAM}\\" -DDDEFAULT_PATH=\\"${DEFAULT_PATH}\\" ' CPPFLAGS="${SELF_CPPFLAGS}" LDFLAGS="${SELF_LDFLAGS}" ${target_platform_preconfigure_options} ./configure --host=${target_platform} --disable-zlib ${OTHER_CONFIGURE}
+			# build
+			COMMAND cd ${TOOL_DROPBEAR_DIR} && make -j4 && make scp
+			# finish
+			COMMAND cd ${TOOL_DROPBEAR_DIR} && mkdir -p ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} && cp dbclient dropbear scp ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+			WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 			COMMENT "Build dropbear"
 		)
 	else(DEFINED CMAKE_TOOLCHAIN_FILE)
 		add_custom_command(
 			OUTPUT BUILD_DROPBEAR
-			COMMAND curl https://matt.ucc.asn.au/dropbear/releases/${TOOL_DROPBEAR_SOURCE} | tar -xvjf - && cd ${CMAKE_BINARY_DIR}/${TOOL_DROPBEAR_DIR} && patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${TOOL_DROPBEAR_PAM_NONEXISTENT_USER_HANDLE_PATCH} && patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${TOOL_DROPBEAR_ENABLE_PATH_REDEFINE_PATCH} && ./configure ${OTHER_CONFIGURE} && CFLAGS=' -D_PATH_SSH_PROGRAM=\\"${_PATH_SSH_PROGRAM}\\" -DDEFAULT_PATH=\\"${DEFAULT_PATH}\\" ' make -j2 && CFLAGS=' -D_PATH_SSH_PROGRAM=\\"${_PATH_SSH_PROGRAM}\\" -DDEFAULT_PATH=\\"${DEFAULT_PATH}\\" ' make scp && mkdir -p ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} && cp ${CMAKE_BINARY_DIR}/${TOOL_DROPBEAR_DIR}/dbclient ${CMAKE_BINARY_DIR}/${TOOL_DROPBEAR_DIR}/dropbear ${CMAKE_BINARY_DIR}/${TOOL_DROPBEAR_DIR}/scp ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-			WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+			COMMAND curl https://matt.ucc.asn.au/dropbear/releases/${TOOL_DROPBEAR_SOURCE} | tar -xvjf - 
+			COMMAND cd ${TOOL_DROPBEAR_DIR} && patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${TOOL_DROPBEAR_PAM_NONEXISTENT_USER_HANDLE_PATCH} && patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${TOOL_DROPBEAR_ENABLE_PATH_REDEFINE_PATCH}
+			COMMAND cd ${TOOL_DROPBEAR_DIR} && CFLAGS='${SELF_CFLAGS} -D_PATH_SSH_PROGRAM=\\"${_PATH_SSH_PROGRAM}\\" -DDDEFAULT_PATH=\\"${DEFAULT_PATH}\\" ' CPPFLAGS="${SELF_CPPFLAGS}" LDFLAGS="${SELF_LDFLAGS}" ./configure ${OTHER_CONFIGURE} 
+			COMMAND cd ${TOOL_DROPBEAR_DIR} && make -j4 && make scp 
+			COMMAND cd ${TOOL_DROPBEAR_DIR} && mkdir -p ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} && cp dbclient dropbear scp ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+			WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 			COMMENT "Build dropbear" 
 		)
 	endif(DEFINED CMAKE_TOOLCHAIN_FILE)
-	add_custom_target(build_dropbear ALL DEPENDS BUILD_DROPBEAR )
+	add_custom_target(build_dropbear ALL DEPENDS ${SELF_DEPENDS} BUILD_DROPBEAR )

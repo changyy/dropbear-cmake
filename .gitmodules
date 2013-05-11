@@ -1,0 +1,3 @@
+[submodule "libpam-cmake"]
+	path = libpam-cmake
+	url = https://github.com/changyy/libpam-cmake.git
